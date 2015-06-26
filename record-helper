@@ -1,87 +1,97 @@
 #!/usr/bin/env python
 import argparse
 from datetime import datetime
-
 try:
     from Tkinter import *
+    from ttk import *
+    from tkMessageBox import showinfo
 except ImportError:
     from tkinter import *
+    from tkinter.ttk import *
+    from tkinter.messagebox import showinfo
 
-try:
-    import ttk
-    py3 = 0
-except ImportError:
-    import tkinter.ttk as ttk
-    py3 = 1
-
-utcnow = datetime.utcnow
-w = None
-
-
-def destroy_New_Toplevel_1():
-    global w
-    w.destroy()
-    w = None
+Y_SMALL_PADDING = 10
+X_SMALL_PADDING = 5
+FONT_SIZE = 28
+FONT_FAMILY = 'Helvetica'
+BUTTON_STYLE = "TButton"
+ALT_BUTTON_STYLE = "Alt.TButton"
 
 
-class New_Toplevel_1:
+class ApplicationWindow(Frame):
 
     def __init__(self, master=None):
-        # _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
-        # _fgcolor = '#000000'  # X11 color: 'black'
-        # _compcolor = '#d9d9d9'  # X11 color: 'gray85'
-        # _ana1color = '#d9d9d9'  # X11 color: 'gray85'
-        # _ana2color = '#d9d9d9'  # X11 color: 'gray85'
-        master.configure(highlightcolor="black")
+        Frame.__init__(self, master)
+        self.grid(sticky=N+S+E+W)
+        self.trans = StringVar()
+        self.trans.set('My whole house shook. '*10)
+        self.createWidgets()
+        self.flashing = True
 
-        self.Label1 = Label(master)
-        self.Label1.place(relx=0.05, rely=0.04, height=248, width=536)
-        # self.Label1.configure(activebackground="#f9f9f9")
-        self.Label1.configure(text='''Label''')
+    def createWidgets(self):
+        top = self.winfo_toplevel()
+        top.rowconfigure(0, weight=1)
+        top.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.Label1 = Text(self, wrap=WORD, padx=5*X_SMALL_PADDING,
+                           pady=5*Y_SMALL_PADDING,
+                           font=(FONT_FAMILY, FONT_SIZE),
+                           height=8, width=33)
+        self.Label1.grid(row=0, columnspan=4, pady=Y_SMALL_PADDING,
+                         sticky=N+S)
+        self.Label1.insert(1.0, self.trans.get())
+        self.Label1.configure(bg=self.master.cget('bg'),
+                              relief='flat', state='disabled')
 
-        self.ButtonR = Button(master)
-        self.ButtonR.place(relx=0.38, rely=0.76, height=26, width=68)
-        # self.ButtonR.configure(activebackground="#d9d9d9")
-        self.ButtonR.configure(text='''Record''')
-
-        self.ButtonP = Button(master)
-        self.ButtonP.place(relx=0.23, rely=0.76, height=26, width=76)
-        # self.ButtonP.configure(activebackground="#d9d9d9")
+        self.ButtonP = Button(self)
+        self.ButtonP.grid(row=1, column=0, padx=X_SMALL_PADDING)
         self.ButtonP.configure(text='''Previous''')
 
-        self.ButtonN = Button(master)
-        self.ButtonN.place(relx=0.62, rely=0.76, height=26, width=54)
-        # self.ButtonN.configure(activebackground="#d9d9d9")
-        self.ButtonN.configure(text='''Next''')
+        self.ButtonR = Button(self)
+        self.ButtonR.grid(row=1, column=1, padx=X_SMALL_PADDING)
+        self.ButtonR.configure(text='''Repeat''')
 
-        self.ButtonS = Button(master)
-        self.ButtonS.place(relx=0.5, rely=0.76, height=26, width=54)
-        # self.ButtonS.configure(activebackground="#d9d9d9")
+        self.ButtonS = Button(self)
+        self.ButtonS.grid(row=1, column=2, padx=X_SMALL_PADDING)
         self.ButtonS.configure(text='''Stop''')
 
-        self.ButtonSave = Button(master)
-        self.ButtonSave.place(relx=0.62, rely=0.87, height=26, width=55)
-        # self.ButtonSave.configure(activebackground="#d9d9d9")
+        self.ButtonN = Button(self)
+        self.ButtonN.grid(row=1, column=3, padx=X_SMALL_PADDING)
+        self.ButtonN.configure(text='''Next''')
+
+        self.ButtonSave = Button(self)
+        self.ButtonSave.grid(row=2, column=3, padx=X_SMALL_PADDING,
+                             pady=Y_SMALL_PADDING)
         self.ButtonSave.configure(text='''Save''')
+
+    def flash(self, button=None):
+        if button is None:
+            button = self.flashing_button
+        else:
+            self.flashing_button = button
+        if self.flashing:
+            button.configure(style=ALT_BUTTON_STYLE)
+            self.after(150, self.flash)
+        else:
+            button.configure(style=BUTTON_STYLE)
+        self.flashing = not(self.flashing)
 
 
 class SpeechRecorderApp(object):
 
     """docstring for SpeechRecorderApp"""
 
-    def __init__(self, prompts):
+    def __init__(self, prompts, root=None):
         super(SpeechRecorderApp, self).__init__()
         self.prompts = prompts
         self.prompt_idx = 0
         self.timer = Timer()
         self.last_time = 0
         self.label = [''] * len(self.prompts)
-        self.label_stamp = str(utcnow())
-        global val, w, root, top_level
-        root.title('Speech Recorder')
-        geom = "600x450+430+211"
-        root.geometry(geom)
-        self.win = New_Toplevel_1(root)
+        self.label_stamp = str(datetime.now())
+        if root:
+            root.title('Speech Recorder')
+        self.win = ApplicationWindow(master=root)
         self.connect_signals()
         self.update_ui()
 
@@ -89,17 +99,25 @@ class SpeechRecorderApp(object):
         self.win.ButtonP['command'] = self.prev_pressed
         self.win.ButtonN['command'] = self.next_pressed
         self.win.ButtonR['command'] = self.record_pressed
-        self.win.ButtonS['command'] = self.stop_pressed
-        self.win.ButtonSave['command'] = self.write_label
+        self.win.ButtonS['command'] = self.stop_pressed2
+        self.win.ButtonSave['command'] = self.save_pressed
 
     def update_ui(self):
-        self.win.Label1.configure(text=self.prompts[self.prompt_idx][1])
+        self.win.Label1.configure(state='normal')
+        self.win.trans.set(self.prompts[self.prompt_idx][1].strip())
+        self.win.Label1.delete(1.0, END)
+        self.win.Label1.insert(1.0, self.win.trans.get())
+        self.win.Label1.configure(state='disabled')
 
     def write_label(self):
-        if self.label[self.prompt_idx] == '':
-            self.stop_pressed()
         with open('label_{}.lab'.format(self.label_stamp), 'w') as f:
             f.writelines(self.label)
+
+    def save_pressed(self):
+        if self.label[self.prompt_idx] == '':
+            self.stop_pressed()
+        self.write_label()
+        self.win.flash(self.win.ButtonSave)
 
     def prev_pressed(self):
         if self.label[self.prompt_idx] == '':
@@ -108,7 +126,9 @@ class SpeechRecorderApp(object):
         if self.prompt_idx < 0:
             self.prompt_idx = 0
         self.update_ui()
-        self.record_pressed()
+        self.last_time = self.timer.now()
+        # self.record_pressed()
+        self.win.flash(self.win.ButtonP)
 
     def next_pressed(self):
         if self.label[self.prompt_idx] == '':
@@ -117,17 +137,32 @@ class SpeechRecorderApp(object):
         self.prompt_idx += 1
         if self.prompt_idx >= len(self.prompts):
             self.prompt_idx = len(self.prompts) - 1
+            showinfo(title='Finished!', message='The recording is finished.\n'
+                                                'Please press save.')
         self.update_ui()
-        self.record_pressed()
+        self.last_time = self.timer.now()
+        # self.record_pressed()
+        self.win.flash(self.win.ButtonN)
 
     def record_pressed(self):
         self.last_time = self.timer.now()
+        self.label[self.prompt_idx] = ''
+        # flash the record button
+        self.win.flash(self.win.ButtonR)
 
     def stop_pressed(self):
+        t0 = self.last_time
+        t1 = self.timer.now()
+        if (t1 < t0) or ((t1-t0) < 10**7):
+            return
         self.label[self.prompt_idx] = \
-            ' '.join([str(self.last_time).rjust(10),
-                      str(self.timer.now()).rjust(10), ' ']) + \
+            ' '.join([str(t0).rjust(10),
+                      str(t1).rjust(10), ' ']) + \
             ' '.join(self.prompts[self.prompt_idx])
+
+    def stop_pressed2(self):
+        self.stop_pressed
+        self.win.flash(self.win.ButtonS)
 
 
 class Timer(object):
@@ -136,23 +171,33 @@ class Timer(object):
 
     def __init__(self):
         super(Timer, self).__init__()
-        self.start = utcnow()
+        self.start = datetime.now()
 
     def now(self):
-        t = utcnow() - self.start
+        t = datetime.now() - self.start
         return int(t.total_seconds() * 10 ** 7)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Facilates speech recording.')
-    parser.add_argument('prompts', metavar='prompts file path', type=str,
+    parser.add_argument('prompts', metavar='prompts_file_path', type=str,
                         help='''path to the prompts file.
-it should contain the utt id at first and the rest should be the prompt
-sepearated by white space.''')
+    it should contain the utt id at first and the rest should be the prompt
+    sepearated by white space.''')
+    parser.add_argument('--dpi', dest='scale', type=float, default=1.0,
+                        help='''scale the UI by this number''')
     args = parser.parse_args()
+    Y_SMALL_PADDING = int(Y_SMALL_PADDING * args.scale)
+    X_SMALL_PADDING = int(X_SMALL_PADDING * args.scale)
+    FONT_SIZE = int(FONT_SIZE * args.scale)
+
     with open(args.prompts) as f:
         lines = f.readlines()
     prompts = [l.split(None, 1) for l in lines]
     root = Tk()
-    app = SpeechRecorderApp(prompts)
+    style = Style()
+    style.configure(BUTTON_STYLE,
+                    font=(FONT_FAMILY, FONT_SIZE))
+    style.configure(ALT_BUTTON_STYLE, foreground='red')
+    app = SpeechRecorderApp(prompts, root)
     root.mainloop()
