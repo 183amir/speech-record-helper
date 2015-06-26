@@ -1,0 +1,5 @@
+# speech-record-helper
+A simple app that helps you with recording sentences
+
+This app does not record the audio. It creates a label file for the recordings
+and helps participants in recording.
